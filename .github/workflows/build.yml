@@ -93,7 +93,7 @@ jobs:
   build:
     name: Build (${{ matrix.arch }})
     needs: [resolve, check]
-    if: needs.resolve.result == 'success' && (inputs.targets == 'build' || (inputs.targets == 'all' && needs.check.result == 'success'))
+    if: always() && needs.resolve.result == 'success' && (inputs.targets == 'build' || (inputs.targets == 'all' && needs.check.result == 'success'))
     runs-on: ${{ matrix.runner }}
     container:
       image: ${{ matrix.image }}
@@ -142,7 +142,7 @@ jobs:
   image:
     name: Image
     needs: [resolve, check]
-    if: needs.resolve.result == 'success' && (inputs.targets == 'image' || (inputs.targets == 'all' && needs.check.result == 'success'))
+    if: always() && needs.resolve.result == 'success' && (inputs.targets == 'image' || (inputs.targets == 'all' && needs.check.result == 'success'))
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
