@@ -10,8 +10,13 @@ on:
       targets:
         description: Targets to run
         type: choice
-        options: [check, build, image, engine-windows, all]
+        options: [check, build, engine-windows, all]
         default: all
+      publish:
+        description: Publish built packages to repository
+        type: boolean
+        default: false
+        required: false
       engine_ref:
         description: Engine branch, tag or commit to check
         default: main
@@ -52,14 +57,9 @@ jobs:
           SEAL_KEY: ${{ secrets.SEAL_KEY }}
           SOURCE_REPOSITORY: ${{ secrets.SOURCE_REPOSITORY }}
           SOURCE_SSH_KEY: ${{ secrets.SOURCE_SSH_KEY }}
-      - &sealed
-        if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: out-${{ github.job }}
-          path: ${{ runner.temp }}/sealed
-          if-no-files-found: ignore
-          retention-days: 1
+          REPO_ACCESS_KEY: ${{ secrets.REPO_ACCESS_KEY }}
+          REPO_SECRET_KEY: ${{ secrets.REPO_SECRET_KEY }}
+          REPO_ENDPOINT: ${{ secrets.REPO_ENDPOINT }}
 
   check:
     name: Check
@@ -69,12 +69,6 @@ jobs:
     timeout-minutes: 45
     steps:
       - *tools
-      - &inbox
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          pattern: out-*
-          merge-multiple: true
-          path: ${{ runner.temp }}/inbox
       - id: cargo
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -88,7 +82,9 @@ jobs:
           SOURCE_SSH_KEY: ${{ secrets.SOURCE_SSH_KEY }}
           DEP_REPOSITORY: ${{ secrets.DEP_REPOSITORY }}
           DEP_SSH_KEY: ${{ secrets.DEP_SSH_KEY }}
-      - *sealed
+          REPO_ACCESS_KEY: ${{ secrets.REPO_ACCESS_KEY }}
+          REPO_SECRET_KEY: ${{ secrets.REPO_SECRET_KEY }}
+          REPO_ENDPOINT: ${{ secrets.REPO_ENDPOINT }}
       - if: always() && steps.cargo.outputs.cache-hit != 'true'
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -116,7 +112,6 @@ jobs:
     steps:
       - run: dnf install -y -q openssh-clients
       - *tools
-      - *inbox
       - id: cargo
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -130,38 +125,33 @@ jobs:
           SOURCE_SSH_KEY: ${{ secrets.SOURCE_SSH_KEY }}
           DEP_REPOSITORY: ${{ secrets.DEP_REPOSITORY }}
           DEP_SSH_KEY: ${{ secrets.DEP_SSH_KEY }}
+          REPO_ACCESS_KEY: ${{ secrets.REPO_ACCESS_KEY }}
+          REPO_SECRET_KEY: ${{ secrets.REPO_SECRET_KEY }}
+          REPO_ENDPOINT: ${{ secrets.REPO_ENDPOINT }}
           ARCH: ${{ matrix.arch }}
-      - if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: out-${{ github.job }}-${{ matrix.arch }}
-          path: ${{ runner.temp }}/sealed
-          if-no-files-found: ignore
-          retention-days: 1
       - if: always() && steps.cargo.outputs.cache-hit != 'true'
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           key: ${{ needs.resolve.outputs[format('cargo-{0}', matrix.arch)] }}
           path: ${{ runner.temp }}/cache/cargo
 
-  image:
-    name: Image
-    needs: [resolve, check]
-    if: always() && needs.resolve.result == 'success' && (inputs.targets == 'image' || (inputs.targets == 'all' && needs.check.result == 'success'))
+  publish:
+    name: Publish
+    needs: [resolve, build]
+    if: always() && inputs.publish && needs.resolve.result == 'success' && needs.build.result == 'success'
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 30
+    concurrency:
+      group: publish
+      cancel-in-progress: false
     steps:
       - *tools
-      - *inbox
-      - run: bash .tools/run image
+      - run: bash .tools/run publish
         env:
           SEAL_KEY: ${{ secrets.SEAL_KEY }}
-          SOURCE_REPOSITORY: ${{ secrets.SOURCE_REPOSITORY }}
-          SOURCE_SSH_KEY: ${{ secrets.SOURCE_SSH_KEY }}
-          DEP_REPOSITORY: ${{ secrets.DEP_REPOSITORY }}
-          DEP_SSH_KEY: ${{ secrets.DEP_SSH_KEY }}
-          GEO_TOKEN: ${{ secrets.GEO_TOKEN }}
-      - *sealed
+          REPO_ACCESS_KEY: ${{ secrets.REPO_ACCESS_KEY }}
+          REPO_SECRET_KEY: ${{ secrets.REPO_SECRET_KEY }}
+          REPO_ENDPOINT: ${{ secrets.REPO_ENDPOINT }}
 
   engine-windows:
     name: Engine (windows)
@@ -178,5 +168,7 @@ jobs:
           SEAL_KEY: ${{ secrets.SEAL_KEY }}
           DEP_REPOSITORY: ${{ secrets.DEP_REPOSITORY }}
           DEP_SSH_KEY: ${{ secrets.DEP_SSH_KEY }}
+          REPO_ACCESS_KEY: ${{ secrets.REPO_ACCESS_KEY }}
+          REPO_SECRET_KEY: ${{ secrets.REPO_SECRET_KEY }}
+          REPO_ENDPOINT: ${{ secrets.REPO_ENDPOINT }}
           ENGINE_REF: ${{ inputs.engine_ref }}
-      - *sealed
