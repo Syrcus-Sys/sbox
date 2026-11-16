@@ -10,7 +10,7 @@ on:
       targets:
         description: Targets to run
         type: choice
-        options: [check, build, engine-windows, all]
+        options: [check, build, engine-linux, engine-windows, all]
         default: all
       publish:
         description: Publish built packages to repository
@@ -36,7 +36,7 @@ env:
 jobs:
   resolve:
     name: Resolve
-    if: inputs.targets != 'engine-windows'
+    if: inputs.targets != 'engine-windows' && inputs.targets != 'engine-linux'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     outputs:
@@ -152,6 +152,23 @@ jobs:
           REPO_ACCESS_KEY: ${{ secrets.REPO_ACCESS_KEY }}
           REPO_SECRET_KEY: ${{ secrets.REPO_SECRET_KEY }}
           REPO_ENDPOINT: ${{ secrets.REPO_ENDPOINT }}
+
+  engine-linux:
+    name: Engine (linux)
+    if: inputs.targets == 'engine-linux'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - *tools
+      - run: bash .tools/run engine-linux
+        env:
+          SEAL_KEY: ${{ secrets.SEAL_KEY }}
+          DEP_REPOSITORY: ${{ secrets.DEP_REPOSITORY }}
+          DEP_SSH_KEY: ${{ secrets.DEP_SSH_KEY }}
+          REPO_ACCESS_KEY: ${{ secrets.REPO_ACCESS_KEY }}
+          REPO_SECRET_KEY: ${{ secrets.REPO_SECRET_KEY }}
+          REPO_ENDPOINT: ${{ secrets.REPO_ENDPOINT }}
+          ENGINE_REF: ${{ inputs.engine_ref }}
 
   engine-windows:
     name: Engine (windows)
