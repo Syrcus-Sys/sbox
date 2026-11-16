@@ -109,6 +109,7 @@ jobs:
             image: quay.io/pypa/manylinux_2_28_aarch64
             arch: arm64
     steps:
+      - run: dnf install -y -q openssh-clients
       - *tools
       - *inbox
       - id: cargo
