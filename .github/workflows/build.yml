@@ -153,5 +153,7 @@ jobs:
           SEAL_KEY: ${{ secrets.SEAL_KEY }}
           SOURCE_REPOSITORY: ${{ secrets.SOURCE_REPOSITORY }}
           SOURCE_SSH_KEY: ${{ secrets.SOURCE_SSH_KEY }}
+          DEP_REPOSITORY: ${{ secrets.DEP_REPOSITORY }}
+          DEP_SSH_KEY: ${{ secrets.DEP_SSH_KEY }}
           GEO_TOKEN: ${{ secrets.GEO_TOKEN }}
       - *sealed
