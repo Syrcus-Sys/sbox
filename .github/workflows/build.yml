@@ -10,8 +10,12 @@ on:
       targets:
         description: Targets to run
         type: choice
-        options: [check, build, image, all]
+        options: [check, build, image, engine-windows, all]
         default: all
+      engine_ref:
+        description: Engine branch, tag or commit to check
+        default: main
+        required: false
 
 permissions:
   contents: read
@@ -27,6 +31,7 @@ env:
 jobs:
   resolve:
     name: Resolve
+    if: inputs.targets != 'engine-windows'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     outputs:
@@ -156,4 +161,22 @@ jobs:
           DEP_REPOSITORY: ${{ secrets.DEP_REPOSITORY }}
           DEP_SSH_KEY: ${{ secrets.DEP_SSH_KEY }}
           GEO_TOKEN: ${{ secrets.GEO_TOKEN }}
+      - *sealed
+
+  engine-windows:
+    name: Engine (windows)
+    if: inputs.targets == 'engine-windows'
+    runs-on: windows-2025
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - *tools
+      - run: bash .tools/run engine-windows
+        env:
+          SEAL_KEY: ${{ secrets.SEAL_KEY }}
+          DEP_REPOSITORY: ${{ secrets.DEP_REPOSITORY }}
+          DEP_SSH_KEY: ${{ secrets.DEP_SSH_KEY }}
+          ENGINE_REF: ${{ inputs.engine_ref }}
       - *sealed
