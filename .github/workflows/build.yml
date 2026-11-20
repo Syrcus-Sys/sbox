@@ -180,7 +180,14 @@ jobs:
         shell: bash
     steps:
       - *tools
-      - run: bash .tools/run engine-windows
+      - id: cargo
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          key: ew-v1-${{ inputs.engine_ref }}
+          restore-keys: ew-v1-
+          path: ${{ runner.temp }}/cache/cargo
+      - id: stage
+        run: bash .tools/run engine-windows
         env:
           SEAL_KEY: ${{ secrets.SEAL_KEY }}
           DEP_REPOSITORY: ${{ secrets.DEP_REPOSITORY }}
@@ -189,3 +196,9 @@ jobs:
           REPO_SECRET_KEY: ${{ secrets.REPO_SECRET_KEY }}
           REPO_ENDPOINT: ${{ secrets.REPO_ENDPOINT }}
           ENGINE_REF: ${{ inputs.engine_ref }}
+          CACHE_MATCHED_KEY: ${{ steps.cargo.outputs.cache-matched-key }}
+      - if: always() && steps.stage.outputs.cargo-key != '' && steps.stage.outputs.cargo-key != steps.cargo.outputs.cache-matched-key
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          key: ${{ steps.stage.outputs.cargo-key }}
+          path: ${{ runner.temp }}/cache/cargo
