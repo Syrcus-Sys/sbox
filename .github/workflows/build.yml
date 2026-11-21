@@ -174,7 +174,7 @@ jobs:
     name: Engine (windows)
     if: inputs.targets == 'engine-windows'
     runs-on: windows-2025
-    timeout-minutes: 60
+    timeout-minutes: 120
     defaults:
       run:
         shell: bash
